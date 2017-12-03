@@ -5,41 +5,49 @@
       reminder_project:
         addr: 127.0.0.1:8000
         cmd: CREATE
-        project: "awesome"
+        name: "awesome"
+      environment:
+          PYTHONPATH: /Users/remirey/dev/ansible-module-reminder
       register: res
-
-    - debug:
-        var: res
-
-    - assert:
-        that:  res.status == 201
-
 
     - name: get the project
       reminder_project:
         addr: 127.0.0.1:8000
         cmd: GET
-        project: "{{ res.data.name }}"
+        name: "{{ res.project.name }}"
+      environment:
+          PYTHONPATH: /Users/remirey/dev/ansible-module-reminder
+      register: res
+
+    - name: create an environment in the project
+      reminder_environment:
+        addr: 127.0.0.1:8000
+        cmd: CREATE
+        project_name: "awesome"
+        name: "staging"
+      environment:
+          PYTHONPATH: /Users/remirey/dev/ansible-module-reminder
       register: res
 
     - debug:
         var: res
 
-    - assert:
-        that: res.status == 200
+    - name: retrieve the id of the reminder object for the project
+      set_fact:
+        reminder_id: "{{ res.environment.reminder.id }}"
 
-  #    - name: create an environment in the project
-  #      reminder:
-  #        cmd: create
-  #        project: "awesome"
-  #        environment: "staging"
-  #
-  #    - name: create a stack in enviroment
-  #      reminder:
-  #        cmd: create
-  #        project: "awesome"
-  #        environment: "staging"
-  #        reminder:
-  #          stack: "kafka"
-  #          stack_section: "hosts"
-  #          hosts: ["some-server.cloud.alt"]
+    - debug:
+        var: reminder_id
+
+    - name: create a stack in enviroment
+      reminder_stack:
+        addr: 127.0.0.1:8000
+        cmd: CREATE
+        reminder_id: "{{ reminder_id }}"
+        name: "kafka"
+      environment:
+          PYTHONPATH: /Users/remirey/dev/ansible-module-reminder
+      register: res
+
+    - debug:
+        var: res

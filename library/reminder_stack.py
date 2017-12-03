@@ -15,10 +15,13 @@ options:
     description:
       Operation to execute (CREATE, GET, LIST, DELETE)
     required: true
-  name:
+  project:
     description:
       name of the project targeted by the operation
     required: true
+  environment:
+    description: name of the project's environent targeted
+    required: false
 '''
 
 EXAMPLES = '''
@@ -41,12 +44,18 @@ import json
 from pyreminder.base import ReminderManager
 
 
+def find_stack(stacks, name):
+    for stack in stacks:
+        if stack['name'] == name:
+            return stack
+
 def main():
 
     argument_spec = dict(
         addr=dict(required=True, type='str'),
         cmd=dict(required=True, type='str',
                  choices=['LIST', 'GET', 'CREATE', 'UPDATE', 'DELETE']),
+        reminder_id=dict(required=True, type='int'),
         name=dict(required=True, type='str'),
     )
 
@@ -54,33 +63,31 @@ def main():
 
     addr = module.params.get('addr')
     cmd = module.params.get('cmd')
+    reminder_id = module.params.get('reminder_id')
     name = module.params.get('name')
     changed = False
 
     reminder = ReminderManager(addr)
+    r_data = reminder.get_reminder(reminder_id)
 
     if cmd == 'CREATE':
-        try:
-            data = reminder.get_project(name)
-            if not data:
-                data = reminder.create_project(name)
+        stacks = r_data['stacks']
+        s = find_stack(stacks, name)
+        if not s:
+            try:
+                data = reminder.create_stack(r_data['id'], name)
                 changed = True
-        except Exception as err:
-            module.fail_json(msg="Failed to create project %s" % err)
+            except Exception as err:
+                module.fail_json(msg="Failed to create project %s" % err)
+        else:
+            data = reminder.get_stack(s['id'])
 
     if cmd == 'GET':
-        try:
-            data = reminder.get_project(name)
-            if data is None:
-                module.fail_json(msg="No project named '%s'" % name)
-        except Exception as err:
-            module.fail_json(msg="Failed to get project %s" % err)
+        data = reminder.get_stack(stack_id)
+        if env_data is None:
+            module.fail_json(msg="No environment named '%s' in project '%s'" % (environment, project))
 
-    if cmd == 'LIST':
-        status, data = reminder.list_projects()
-        module.exit_json(changed=changed, projects=data)
-
-    module.exit_json(changed=changed, project=data)
+    module.exit_json(changed=changed, stack=data)
 
 from ansible.module_utils.basic import *
 from ansible.module_utils.urls import *

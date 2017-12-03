@@ -15,24 +15,22 @@ options:
     description:
       Operation to execute (CREATE, GET, LIST, DELETE)
     required: true
-  name:
+  project_name:
     description:
       name of the project targeted by the operation
+    required: true
+  name:
+    description: name of the targeted environent
     required: true
 '''
 
 EXAMPLES = '''
 # Create a new project
-reminder_project:
+reminder_environment:
   addr: 127.0.0.1:8000
   cmd: CREATE
-  project: "awesome"
-
-# Get a project data
-reminder_project:
-  addr: 127.0.0.1:8000
-  cmd: GET
-  project: "awesome"
+  project_name: "awesome"
+  name: "staging"
 '''
 
 import httplib
@@ -40,6 +38,10 @@ import os.path
 import json
 from pyreminder.base import ReminderManager
 
+def find_environment(environments, name):
+    for env in environments:
+        if env['name'] == name:
+            return env
 
 def main():
 
@@ -47,40 +49,41 @@ def main():
         addr=dict(required=True, type='str'),
         cmd=dict(required=True, type='str',
                  choices=['LIST', 'GET', 'CREATE', 'UPDATE', 'DELETE']),
-        name=dict(required=True, type='str'),
+        project_name=dict(required=True, type='str'),
+        name=dict(required=False, type='str', default=None),
     )
 
     module = AnsibleModule(argument_spec=argument_spec)
 
     addr = module.params.get('addr')
     cmd = module.params.get('cmd')
+    project_name = module.params.get('project_name')
     name = module.params.get('name')
     changed = False
 
     reminder = ReminderManager(addr)
 
+    project = reminder.get_project(project_name)
+    env = find_environment(project['environments'], name)
+
     if cmd == 'CREATE':
-        try:
-            data = reminder.get_project(name)
-            if not data:
-                data = reminder.create_project(name)
-                changed = True
-        except Exception as err:
-            module.fail_json(msg="Failed to create project %s" % err)
-
+       try:
+           if env is None:
+               data = reminder.create_env(project_id, name)
+               changed = True
+           else:
+               data = reminder.get_env(env['id'])
+       except Exception as err:
+           module.fail_json(msg="Failed to create environment %s" % err)
     if cmd == 'GET':
-        try:
-            data = reminder.get_project(name)
-            if data is None:
-                module.fail_json(msg="No project named '%s'" % name)
-        except Exception as err:
-            module.fail_json(msg="Failed to get project %s" % err)
-
+        if env:
+            data = reminder.get_env(env['id'])
+        else:
+            module.fail_json(msg="No environment named '%s' in project '%s'" % (name, project_name))
     if cmd == 'LIST':
         status, data = reminder.list_projects()
-        module.exit_json(changed=changed, projects=data)
 
-    module.exit_json(changed=changed, project=data)
+    module.exit_json(changed=changed, environment=data)
 
 from ansible.module_utils.basic import *
 from ansible.module_utils.urls import *
