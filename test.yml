@@ -1,0 +1,45 @@
+
+- hosts: localhost
+  tasks:
+    - name: create the project
+      reminder_project:
+        addr: 127.0.0.1:8000
+        cmd: CREATE
+        project: "awesome"
+      register: res
+
+    - debug:
+        var: res
+
+    - assert:
+        that:  res.status == 201
+
+
+    - name: get the project
+      reminder_project:
+        addr: 127.0.0.1:8000
+        cmd: GET
+        project: "{{ res.data.name }}"
+      register: res
+
+    - debug:
+        var: res
+
+    - assert:
+        that: res.status == 200
+
+  #    - name: create an environment in the project
+  #      reminder:
+  #        cmd: create
+  #        project: "awesome"
+  #        environment: "staging"
+  #
+  #    - name: create a stack in enviroment
+  #      reminder:
+  #        cmd: create
+  #        project: "awesome"
+  #        environment: "staging"
+  #        reminder:
+  #          stack: "kafka"
+  #          stack_section: "hosts"
+  #          hosts: ["some-server.cloud.alt"]
