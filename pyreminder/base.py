@@ -43,6 +43,12 @@ class ReminderManager(object):
         response = self.conn.getresponse()
         return response.status, json.loads(response.read())
 
+    def _post_stack(self, reminder, name):
+        body = json.dumps({'reminder': reminder, 'name': name})
+        self.conn.request('POST', self.stacks_path, body, self.headers)
+        response = self.conn.getresponse()
+        return response.status, json.loads(response.read())
+
     def _get_reminder(self, Id):
         path = os.path.join(self.reminders_path, str(Id))
         self.conn.request('GET', "%s/" % path, None, self.headers)
@@ -69,6 +75,12 @@ class ReminderManager(object):
     
     def create_env(self, project_id, name):
         status, data = self._post_environment(project_id, name)
+        if status == 201:
+            return data
+        raise Exception(data)
+
+    def create_stack(self, reminder_id, name):
+        status, data = self._post_stack(reminder_id, name)
         if status == 201:
             return data
         raise Exception(data)

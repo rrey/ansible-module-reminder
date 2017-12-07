@@ -3,7 +3,7 @@
 
 DOCUMENTATION = '''
 ---
-module: reminder
+module: reminder_project
 short_description: Handle communication with reminder-api.
 description:
   - short_description: Handle communication with reminder-api.
@@ -11,9 +11,9 @@ options:
   addr:
     description: reminder api address
     required: true
-  cmd:
+  state:
     description:
-      Operation to execute (CREATE, GET, LIST, DELETE)
+      present/absent
     required: true
   name:
     description:
@@ -22,17 +22,17 @@ options:
 '''
 
 EXAMPLES = '''
-# Create a new project
-reminder_project:
-  addr: 127.0.0.1:8000
-  cmd: CREATE
-  project: "awesome"
+- name: Create a project name "awesome"
+  reminder_project:
+    addr: 127.0.0.1:8000
+    state: present
+    project: "awesome"
 
-# Get a project data
-reminder_project:
-  addr: 127.0.0.1:8000
-  cmd: GET
-  project: "awesome"
+- name: Delete the project named "awesome"
+  reminder_project:
+    addr: 127.0.0.1:8000
+    state: absent
+    project: "awesome"
 '''
 
 import httplib
@@ -45,42 +45,39 @@ def main():
 
     argument_spec = dict(
         addr=dict(required=True, type='str'),
-        cmd=dict(required=True, type='str',
-                 choices=['LIST', 'GET', 'CREATE', 'UPDATE', 'DELETE']),
+        state=dict(required=True, type='str', choices=['present', 'absent']),
         name=dict(required=True, type='str'),
     )
 
     module = AnsibleModule(argument_spec=argument_spec)
 
     addr = module.params.get('addr')
-    cmd = module.params.get('cmd')
+    state = module.params.get('state')
     name = module.params.get('name')
     changed = False
 
     reminder = ReminderManager(addr)
+    data = reminder.get_project(name)
 
-    if cmd == 'CREATE':
-        try:
-            data = reminder.get_project(name)
-            if not data:
+    if state == 'present':
+        if data is None:
+            try:
                 data = reminder.create_project(name)
                 changed = True
-        except Exception as err:
-            module.fail_json(msg="Failed to create project %s" % err)
+            except Exception as err:
+                module.fail_json(msg="Failed to create project", error=str(err))
+        module.exit_json(changed=changed, project=data)
 
-    if cmd == 'GET':
-        try:
-            data = reminder.get_project(name)
-            if data is None:
-                module.fail_json(msg="No project named '%s'" % name)
-        except Exception as err:
-            module.fail_json(msg="Failed to get project %s" % err)
+    elif state == 'absent':
+        if data is not None:
+            try:
+                # TODO: implement the delete in the class
+                reminder.delete_project(name)
+            except Exception as err:
+                module.fail_json(msg="Failed to delete project", error=str(err))
+        module.exit_json(changed=changed)
 
-    if cmd == 'LIST':
-        status, data = reminder.list_projects()
-        module.exit_json(changed=changed, projects=data)
-
-    module.exit_json(changed=changed, project=data)
+    module.fail_json(msg="unexpected failure")
 
 from ansible.module_utils.basic import *
 from ansible.module_utils.urls import *

@@ -11,9 +11,10 @@ options:
   addr:
     description: reminder api address
     required: true
-  cmd:
+  state:
     description:
-      Operation to execute (CREATE, GET, LIST, DELETE)
+      present will create the environment if not present
+      absent will delete the environment if present
     required: true
   project_name:
     description:
@@ -25,12 +26,19 @@ options:
 '''
 
 EXAMPLES = '''
-# Create a new project
-reminder_environment:
-  addr: 127.0.0.1:8000
-  cmd: CREATE
-  project_name: "awesome"
-  name: "staging"
+- name: Create an environment named "staging" in project "awesome"
+  reminder_environment:
+    addr: 127.0.0.1:8000
+    state: present
+    project_name: "awesome"
+    name: "staging"
+
+- name: Delete the environment "staging" in the project "awesome"
+  reminder_environment:
+    addr: 127.0.0.1:8000
+    state: absent
+    project_name: "awesome"
+    name: "staging"
 '''
 
 import httplib
@@ -47,8 +55,8 @@ def main():
 
     argument_spec = dict(
         addr=dict(required=True, type='str'),
-        cmd=dict(required=True, type='str',
-                 choices=['LIST', 'GET', 'CREATE', 'UPDATE', 'DELETE']),
+        state=dict(required=True, type='str',
+                 choices=['present', 'absent']),
         project_name=dict(required=True, type='str'),
         name=dict(required=False, type='str', default=None),
     )
@@ -56,7 +64,7 @@ def main():
     module = AnsibleModule(argument_spec=argument_spec)
 
     addr = module.params.get('addr')
-    cmd = module.params.get('cmd')
+    state = module.params.get('state')
     project_name = module.params.get('project_name')
     name = module.params.get('name')
     changed = False
@@ -64,26 +72,30 @@ def main():
     reminder = ReminderManager(addr)
 
     project = reminder.get_project(project_name)
+    if project is None:
+        module.fail_json(msg="Failed to create environment %s" % err)
     env = find_environment(project['environments'], name)
 
-    if cmd == 'CREATE':
-       try:
-           if env is None:
-               data = reminder.create_env(project_id, name)
-               changed = True
-           else:
-               data = reminder.get_env(env['id'])
-       except Exception as err:
-           module.fail_json(msg="Failed to create environment %s" % err)
-    if cmd == 'GET':
-        if env:
-            data = reminder.get_env(env['id'])
-        else:
-            module.fail_json(msg="No environment named '%s' in project '%s'" % (name, project_name))
-    if cmd == 'LIST':
-        status, data = reminder.list_projects()
+    if state == 'present':
+        if env is None:
+            try:
+                env = reminder.create_env(project['id'], name)
+                changed = True
+            except Exception as err:
+                module.fail_json(msg="Failed to create environment", error=str(err))
+        data = reminder.get_env(env['id'])
+        module.exit_json(changed=changed, environment=data)
+    if state == 'absent':
+        if env is not None:
+            try:
+                # TODO: implement the delete in the class
+                env = reminder.delete_env(project['id'], name)
+                changed = True
+            except Exception as err:
+                module.fail_json(msg="Failed to delete environment", error=str(err))
+        module.exit_json(changed=changed)
 
-    module.exit_json(changed=changed, environment=data)
+    module.fail_json(msg="unexpected failure")
 
 from ansible.module_utils.basic import *
 from ansible.module_utils.urls import *

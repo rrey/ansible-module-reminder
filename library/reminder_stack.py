@@ -11,9 +11,9 @@ options:
   addr:
     description: reminder api address
     required: true
-  cmd:
+  state:
     description:
-      Operation to execute (CREATE, GET, LIST, DELETE)
+      present/absent
     required: true
   project:
     description:
@@ -25,17 +25,19 @@ options:
 '''
 
 EXAMPLES = '''
-# Create a new project
-reminder_project:
-  addr: 127.0.0.1:8000
-  cmd: CREATE
-  project: "awesome"
+- name: Create new stack inside a reminder
+  reminder_stack:
+    addr: 127.0.0.1:8000
+    state: present
+    reminder_id: 42
+    name: "my stack name"
 
-# Get a project data
-reminder_project:
-  addr: 127.0.0.1:8000
-  cmd: GET
-  project: "awesome"
+- name: Delete a stack from a reminder
+  reminder_stack:
+    addr: 127.0.0.1:8000
+    state: present
+    reminder_id: 42
+    name: "my stack name"
 '''
 
 import httplib
@@ -53,8 +55,7 @@ def main():
 
     argument_spec = dict(
         addr=dict(required=True, type='str'),
-        cmd=dict(required=True, type='str',
-                 choices=['LIST', 'GET', 'CREATE', 'UPDATE', 'DELETE']),
+        state=dict(required=True, type='str', choices=['absent', 'present']),
         reminder_id=dict(required=True, type='int'),
         name=dict(required=True, type='str'),
     )
@@ -62,32 +63,39 @@ def main():
     module = AnsibleModule(argument_spec=argument_spec)
 
     addr = module.params.get('addr')
-    cmd = module.params.get('cmd')
+    state = module.params.get('state')
     reminder_id = module.params.get('reminder_id')
     name = module.params.get('name')
     changed = False
 
     reminder = ReminderManager(addr)
-    r_data = reminder.get_reminder(reminder_id)
+    my_reminder = reminder.get_reminder(reminder_id)
+    if not my_reminder:
+        module.fail_json(msg="Reminder not found")
+    stacks = my_reminder['stacks']
+    stack = find_stack(stacks, name)
 
-    if cmd == 'CREATE':
-        stacks = r_data['stacks']
-        s = find_stack(stacks, name)
-        if not s:
+    if state == 'present':
+        if stack is None:
             try:
-                data = reminder.create_stack(r_data['id'], name)
+                stack = reminder.create_stack(my_reminder['id'], name)
                 changed = True
             except Exception as err:
-                module.fail_json(msg="Failed to create project %s" % err)
-        else:
-            data = reminder.get_stack(s['id'])
+                module.fail_json(msg="Failed to create stack %s" % err)
+        data = reminder.get_stack(stack.get('id'))
+        module.exit_json(changed=changed, stack=data)
 
-    if cmd == 'GET':
-        data = reminder.get_stack(stack_id)
-        if env_data is None:
-            module.fail_json(msg="No environment named '%s' in project '%s'" % (environment, project))
+    if state == 'absent':
+        if stack is not None:
+            try:
+                # TODO: implement the delete in the class
+                data = reminder.create_stack(my_reminder.get('id'), name)
+                changed = True
+            except Exception as err:
+                module.fail_json(msg="Failed to delete stack %s" % err)
+        module.exit_json(changed=changed)
 
-    module.exit_json(changed=changed, stack=data)
+    module.json_fail(msg="unexpected failure")
 
 from ansible.module_utils.basic import *
 from ansible.module_utils.urls import *
