@@ -25,12 +25,25 @@ options:
 '''
 
 EXAMPLES = '''
-- name: Create new stack inside a reminder
+- name: Create a new stack inside a reminder
   reminder_stack:
     addr: 127.0.0.1:8000
     state: present
     reminder_id: 42
     name: "my stack name"
+
+- name: Create a new stack with a list of hosts and urls
+  reminder_stack:
+    addr: 127.0.0.1:8000
+    state: present
+    reminder_id: 42
+    name: "my stack name"
+    hosts:
+      - someserver-1.example.com
+      - someserver-2.example.com
+    urls:
+      - http://someserver-1.example.com/admin
+      - http://someserver-2.example.com/admin
 
 - name: Delete a stack from a reminder
   reminder_stack:
@@ -40,11 +53,7 @@ EXAMPLES = '''
     name: "my stack name"
 '''
 
-import httplib
-import os.path
-import json
 from pyreminder.base import ReminderManager
-
 
 def find_stack(stacks, name):
     for stack in stacks:
@@ -58,6 +67,8 @@ def main():
         state=dict(required=True, type='str', choices=['absent', 'present']),
         reminder_id=dict(required=True, type='int'),
         name=dict(required=True, type='str'),
+        hosts=dict(required=False, type='list', default=[]),
+        urls=dict(required=False, type='list', default=[]),
     )
 
     module = AnsibleModule(argument_spec=argument_spec)
@@ -66,6 +77,9 @@ def main():
     state = module.params.get('state')
     reminder_id = module.params.get('reminder_id')
     name = module.params.get('name')
+    hosts = module.params.get('hosts')
+    urls = module.params.get('urls')
+
     changed = False
 
     reminder = ReminderManager(addr)
@@ -78,7 +92,23 @@ def main():
     if state == 'present':
         if stack is None:
             try:
-                stack = reminder.create_stack(my_reminder['id'], name)
+                stack = reminder.create_stack(my_reminder['id'], name, hosts, urls)
+                changed = True
+            except Exception as err:
+                module.fail_json(msg="Failed to create stack %s" % err)
+        data = reminder.get_stack(stack.get('id'))
+        update = False
+        current_hosts = [h['hostname'] for h in data['hosts']]
+        # {{{ compare hosts and urls
+        if hosts != current_hosts:
+            update = True
+        current_urls = [u['url'] for u in data['urls']]
+        if urls != current_urls:
+            update = True
+        # }}}
+        if update is True:
+            try:
+                stack = reminder.update_stack(my_reminder['id'], name, hosts, urls)
                 changed = True
             except Exception as err:
                 module.fail_json(msg="Failed to create stack %s" % err)
@@ -89,7 +119,7 @@ def main():
         if stack is not None:
             try:
                 # TODO: implement the delete in the class
-                data = reminder.create_stack(my_reminder.get('id'), name)
+                data = reminder.delete_stack(my_reminder.get('id'), name)
                 changed = True
             except Exception as err:
                 module.fail_json(msg="Failed to delete stack %s" % err)

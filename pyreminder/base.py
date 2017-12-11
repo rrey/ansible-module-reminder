@@ -43,9 +43,16 @@ class ReminderManager(object):
         response = self.conn.getresponse()
         return response.status, json.loads(response.read())
 
-    def _post_stack(self, reminder, name):
-        body = json.dumps({'reminder': reminder, 'name': name})
+    def _post_stack(self, reminder, name, hosts, urls):
+        body = json.dumps({'reminder': reminder, 'name': name, 'hosts': hosts, 'urls': urls})
         self.conn.request('POST', self.stacks_path, body, self.headers)
+        response = self.conn.getresponse()
+        return response.status, json.loads(response.read())
+
+    def _put_stack(self, Id, name, hosts, urls):
+        path = os.path.join(self.stacks_path, str(Id))
+        body = json.dumps({'name': name, 'hosts': hosts, 'urls': urls})
+        self.conn.request('PUT', "%s/" % path, body, self.headers)
         response = self.conn.getresponse()
         return response.status, json.loads(response.read())
 
@@ -79,9 +86,23 @@ class ReminderManager(object):
             return data
         raise Exception(data)
 
-    def create_stack(self, reminder_id, name):
-        status, data = self._post_stack(reminder_id, name)
+    def create_stack(self, reminder_id, name, hosts, urls):
+        if hosts:
+            hosts = [{'hostname': host} for host in hosts]
+        if urls:
+            urls = [{'url': url} for url in urls]
+        status, data = self._post_stack(reminder_id, name, hosts, urls)
         if status == 201:
+            return data
+        raise Exception(data)
+
+    def update_stack(self, stack_id, name, hosts, urls):
+        if hosts:
+            hosts = [{'hostname': host} for host in hosts]
+        if urls:
+            urls = [{'url': url} for url in urls]
+        status, data = self._put_stack(stack_id, name, hosts, urls)
+        if status == 200:
             return data
         raise Exception(data)
 

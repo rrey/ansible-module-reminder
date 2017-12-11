@@ -39,6 +39,10 @@
         state: present
         reminder_id: "{{ reminder_id }}"
         name: "kafka"
+        hosts:
+            - kafka-a-01.example.com
+        urls:
+            - http://kafka-a-01.example.com/
       environment:
           PYTHONPATH: /Users/remirey/dev/ansible-module-reminder
       register: res
@@ -46,21 +50,21 @@
     - debug:
         var: res
 
-    - set_fact:
-        stack_id: "{{ res.stack.id }}"
+    - name: update a stack in enviroment
+      reminder_stack:
+        addr: 127.0.0.1:8000
+        state: present
+        reminder_id: "{{ reminder_id }}"
+        name: "kafka"
+        hosts:
+            - kafka-a-01.example.com
+            - kafka-a-01.example.com
+        urls:
+            - http://kafka-a-01.example.com/
+            - http://kafka-a-02.example.com/
+      environment:
+          PYTHONPATH: /Users/remirey/dev/ansible-module-reminder
+      register: res
 
-  #    - name: create a stack section
-  #      reminder_stack:
-  #        addr: 127.0.0.1:8000
-  #        state: present
-  #        stack_id: "{{ stack_id }}"
-  #        name: "Server list"
-  #      environment:
-  #          PYTHONPATH: /Users/remirey/dev/ansible-module-reminder
-  #      register: res
-  #
-  #    - debug:
-  #        var: res
-  #
-  #    - set_fact:
-  #        stack_section_id: "{{ res.stack_section.id }}"
+    - debug:
+        var: res
