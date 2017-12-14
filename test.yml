@@ -55,7 +55,7 @@
         addr: 127.0.0.1:8000
         state: present
         reminder_id: "{{ reminder_id }}"
-        name: "kafka"
+        name: "confluent-kafka"
         hosts:
             - kafka-a-01.example.com
             - kafka-a-01.example.com
@@ -64,6 +64,19 @@
             - http://kafka-a-02.example.com/
       environment:
           PYTHONPATH: /Users/remirey/dev/ansible-module-reminder
+      register: res
+
+    - name: ensure stack listed in group vars are created
+      reminder_stack:
+        addr: 127.0.0.1:8000
+        state: present
+        reminder_id: "{{ reminder_id }}"
+        name: "{{ item.name }}"
+        hosts: "{{ item.hosts }}"
+        urls: "{{ item.urls }}"
+      with_items: "{{ stacks }}"
+      environment:
+        PYTHONPATH: /Users/remirey/dev/ansible-module-reminder
       register: res
 
     - debug:
