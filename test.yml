@@ -1,5 +1,6 @@
 
 - hosts: localhost
+  connection: local
   tasks:
     - name: create the project
       reminder_project:
