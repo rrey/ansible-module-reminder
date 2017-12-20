@@ -1,6 +1,10 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
+import httplib
+import os.path
+import json
+
 DOCUMENTATION = '''
 ---
 module: reminder_project
@@ -35,10 +39,43 @@ EXAMPLES = '''
     project: "awesome"
 '''
 
-import httplib
-import os.path
-import json
-from pyreminder.base import ReminderManager
+class ReminderManager(object):
+    headers = {"Content-Type": "application/json"}
+    projects_path = "/projects/"
+
+    def __init__(self, addr):
+        self.conn = httplib.HTTPConnection(addr)
+
+    def _list_projects(self):
+        self.conn.request('GET', self.projects_path, None, self.headers)
+        response = self.conn.getresponse()
+        return response.status, json.loads(response.read())
+
+    def _get_project(self, name):
+        path = os.path.join(self.projects_path, name)
+        self.conn.request('GET', "%s/" % path, None, self.headers)
+        response = self.conn.getresponse()
+        return response.status, json.loads(response.read())
+
+    def _post_project(self, name):
+        body = json.dumps({'name': name})
+        self.conn.request('POST', self.projects_path, body, self.headers)
+        response = self.conn.getresponse()
+        return response.status, json.loads(response.read())
+
+    def get_project(self, name):
+        status, data = self._get_project(name)
+        if status == 200:
+            return data
+
+    def create_project(self, name):
+        status, data = self._post_project(name)
+        if status == 201:
+            return data
+        raise Exception(data)
+
+    def delete_project(self, name):
+        raise Exception("UNIMPLEMENTED")
 
 
 def main():

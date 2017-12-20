@@ -53,7 +53,74 @@ EXAMPLES = '''
     name: "my stack name"
 '''
 
-from pyreminder.base import ReminderManager
+class ReminderManager(object):
+    headers = {"Content-Type": "application/json"}
+    reminders_path = "/reminders/"
+    stacks_path = "/stacks/"
+
+    def __init__(self, addr):
+        self.conn = httplib.HTTPConnection(addr)
+
+    def _get_stack(self, Id):
+        path = os.path.join(self.stacks_path, str(Id))
+        self.conn.request('GET', "%s/" % path, None, self.headers)
+        response = self.conn.getresponse()
+        return response.status, json.loads(response.read())
+
+    def _post_stack(self, reminder, name, hosts, urls):
+        body = json.dumps({'reminder': reminder, 'name': name, 'hosts': hosts, 'urls': urls})
+        self.conn.request('POST', self.stacks_path, body, self.headers)
+        response = self.conn.getresponse()
+        return response.status, json.loads(response.read())
+
+    def _put_stack(self, Id, name, hosts, urls):
+        path = os.path.join(self.stacks_path, str(Id))
+        body = json.dumps({'name': name, 'hosts': hosts, 'urls': urls})
+        self.conn.request('PUT', "%s/" % path, body, self.headers)
+        response = self.conn.getresponse()
+        return response.status, json.loads(response.read())
+
+    def _get_reminder(self, Id):
+        path = os.path.join(self.reminders_path, str(Id))
+        self.conn.request('GET', "%s/" % path, None, self.headers)
+        response = self.conn.getresponse()
+        return response.status, json.loads(response.read())
+
+    def get_reminder(self, Id):
+        status, data = self._get_reminder(Id)
+        if status == 200:
+            return data
+        raise Exception(data)
+
+    def get_stack(self, Id):
+        status, data = self._get_stack(Id)
+        if status == 200:
+            return data
+        raise Exception(data)
+
+    def create_stack(self, reminder_id, name, hosts, urls):
+        if hosts:
+            hosts = [{'hostname': host} for host in hosts]
+        if urls:
+            urls = [{'url': url} for url in urls]
+        status, data = self._post_stack(reminder_id, name, hosts, urls)
+        if status == 201:
+            return data
+        raise Exception(data)
+
+    def update_stack(self, stack_id, name, hosts, urls):
+        if hosts:
+            hosts = [{'hostname': host} for host in hosts]
+        if urls:
+            urls = [{'url': url} for url in urls]
+        status, data = self._put_stack(stack_id, name, hosts, urls)
+        if status == 200:
+            return data
+        raise Exception(data)
+
+    def delete_stack(self, stack_id):
+        raise Exception("UNIMPLEMENTED")
+
 
 def find_stack(stacks, name):
     for stack in stacks:
@@ -125,7 +192,7 @@ def main():
                 module.fail_json(msg="Failed to delete stack %s" % err)
         module.exit_json(changed=changed)
 
-    module.json_fail(msg="unexpected failure")
+    module.fail_json(msg="unexpected failure")
 
 from ansible.module_utils.basic import *
 from ansible.module_utils.urls import *
