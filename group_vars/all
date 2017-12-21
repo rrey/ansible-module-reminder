@@ -6,24 +6,28 @@ stacks:
     urls:
       - http://es-elk-a-01.local:5601/
     hosts: []
+    category: "Reactive Platform"
   - name: 'Elasticsearch'
     logo: 'elasticsearch.svg'
     desc: 'Stack ELK pour exploiter les logs de la plateforme.'
     urls:
       - http://es-elk-a-01.local:9200/
     hosts: []
+    category: "Reactive Platform"
   - name: 'Grafana'
     logo: 'grafana.svg'
     desc: 'Outil de visualisation des metriques'
     urls:
       - http://grafana-a-01.local:9200/
     hosts: []
+    category: "Reactive Platform"
   - name: 'Prometheus'
     logo: 'prometheus.png'
     desc: 'Stockage temporel des métriques'
     urls:
       - http://prometheus-a-01.local:9200/
     hosts: []
+    category: "Reactive Platform"
   - name: 'Kafka'
     logo: 'kafka.png'
     desc: 'Stockage des evenements'
@@ -31,3 +35,4 @@ stacks:
     hosts:
       - 'kafka-a-01'
       - 'kafka-a-02'
+    category: "Reactive Platform"
