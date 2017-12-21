@@ -36,6 +36,7 @@
         state: present
         reminder_id: "{{ reminder_id }}"
         name: "kafka"
+        logo: "kafka.png"
         hosts:
             - kafka-a-01.example.com
         urls:
@@ -51,6 +52,7 @@
         state: present
         reminder_id: "{{ reminder_id }}"
         name: "confluent-kafka"
+        logo: "kafka.png"
         hosts:
             - kafka-a-01.example.com
             - kafka-a-01.example.com
@@ -67,6 +69,7 @@
         name: "{{ item.name }}"
         hosts: "{{ item.hosts }}"
         urls: "{{ item.urls }}"
+        logo: "{{ item.logo }}"
       with_items: "{{ stacks }}"
       register: res
 
