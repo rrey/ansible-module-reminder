@@ -1,33 +1,38 @@
 
 stacks:
   - name: 'Kibana'
-    logo: 'assets/kibana.svg'
+    logo: 'kibana.svg'
     desc: 'Stack ELK pour exploiter les logs de la plateforme.'
     urls:
       - http://es-elk-a-01.local:5601/
     hosts: []
+    category: "Reactive Platform"
   - name: 'Elasticsearch'
-    logo: 'assets/elasticsearch.svg'
+    logo: 'elasticsearch.svg'
     desc: 'Stack ELK pour exploiter les logs de la plateforme.'
     urls:
       - http://es-elk-a-01.local:9200/
     hosts: []
+    category: "Reactive Platform"
   - name: 'Grafana'
-    logo: 'assets/grafana.svg'
+    logo: 'grafana.svg'
     desc: 'Outil de visualisation des metriques'
     urls:
       - http://grafana-a-01.local:9200/
     hosts: []
+    category: "Reactive Platform"
   - name: 'Prometheus'
-    logo: 'assets/prometheus.png'
+    logo: 'prometheus.png'
     desc: 'Stockage temporel des métriques'
     urls:
       - http://prometheus-a-01.local:9200/
     hosts: []
+    category: "Reactive Platform"
   - name: 'Kafka'
-    logo: 'assets/kafka.png'
+    logo: 'kafka.png'
     desc: 'Stockage des evenements'
     urls: []
     hosts:
       - 'kafka-a-01'
       - 'kafka-a-02'
+    category: "Reactive Platform"

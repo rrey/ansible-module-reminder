@@ -31,6 +31,8 @@ EXAMPLES = '''
     state: present
     reminder_id: 42
     name: "my stack name"
+    logo: "my_stack.png"
+    category: "Reactive Platform"
 
 - name: Create a new stack with a list of hosts and urls
   reminder_stack:
@@ -38,6 +40,8 @@ EXAMPLES = '''
     state: present
     reminder_id: 42
     name: "my stack name"
+    logo: "my_stack.png"
+    category: "Reactive Platform"
     hosts:
       - someserver-1.example.com
       - someserver-2.example.com
@@ -51,6 +55,8 @@ EXAMPLES = '''
     state: present
     reminder_id: 42
     name: "my stack name"
+    logo: "my_stack.png"
+    category: "Reactive Platform"
 '''
 
 class ReminderManager(object):
@@ -67,15 +73,15 @@ class ReminderManager(object):
         response = self.conn.getresponse()
         return response.status, json.loads(response.read())
 
-    def _post_stack(self, reminder, name, hosts, urls):
-        body = json.dumps({'reminder': reminder, 'name': name, 'hosts': hosts, 'urls': urls})
+    def _post_stack(self, reminder, name, logo, category, hosts, urls):
+        body = json.dumps({'reminder': reminder, 'name': name, 'logo': logo, 'category': category, 'hosts': hosts, 'urls': urls})
         self.conn.request('POST', self.stacks_path, body, self.headers)
         response = self.conn.getresponse()
         return response.status, json.loads(response.read())
 
-    def _put_stack(self, Id, name, hosts, urls):
+    def _put_stack(self, Id, name, logo, category, hosts, urls):
         path = os.path.join(self.stacks_path, str(Id))
-        body = json.dumps({'name': name, 'hosts': hosts, 'urls': urls})
+        body = json.dumps({'name': name, 'logo': logo, 'category': category, 'hosts': hosts, 'urls': urls})
         self.conn.request('PUT', "%s/" % path, body, self.headers)
         response = self.conn.getresponse()
         return response.status, json.loads(response.read())
@@ -98,22 +104,22 @@ class ReminderManager(object):
             return data
         raise Exception(data)
 
-    def create_stack(self, reminder_id, name, hosts, urls):
+    def create_stack(self, reminder_id, name, logo, category, hosts, urls):
         if hosts:
             hosts = [{'hostname': host} for host in hosts]
         if urls:
             urls = [{'url': url} for url in urls]
-        status, data = self._post_stack(reminder_id, name, hosts, urls)
+        status, data = self._post_stack(reminder_id, name, logo, category, hosts, urls)
         if status == 201:
             return data
         raise Exception(data)
 
-    def update_stack(self, stack_id, name, hosts, urls):
+    def update_stack(self, stack_id, name, logo, category, hosts, urls):
         if hosts:
             hosts = [{'hostname': host} for host in hosts]
         if urls:
             urls = [{'url': url} for url in urls]
-        status, data = self._put_stack(stack_id, name, hosts, urls)
+        status, data = self._put_stack(stack_id, name, logo, category, hosts, urls)
         if status == 200:
             return data
         raise Exception(data)
@@ -134,6 +140,8 @@ def main():
         state=dict(required=True, type='str', choices=['absent', 'present']),
         reminder_id=dict(required=True, type='int'),
         name=dict(required=True, type='str'),
+        logo=dict(required=True, type='str'),
+        category=dict(required=True, type='str'),
         hosts=dict(required=False, type='list', default=[]),
         urls=dict(required=False, type='list', default=[]),
     )
@@ -144,6 +152,8 @@ def main():
     state = module.params.get('state')
     reminder_id = module.params.get('reminder_id')
     name = module.params.get('name')
+    logo = module.params.get('logo')
+    category = module.params.get('category')
     hosts = module.params.get('hosts')
     urls = module.params.get('urls')
 
@@ -159,7 +169,7 @@ def main():
     if state == 'present':
         if stack is None:
             try:
-                stack = reminder.create_stack(my_reminder['id'], name, hosts, urls)
+                stack = reminder.create_stack(my_reminder['id'], name, logo, category, hosts, urls)
                 changed = True
             except Exception as err:
                 module.fail_json(msg="Failed to create stack %s" % err)
@@ -175,7 +185,7 @@ def main():
         # }}}
         if update is True:
             try:
-                stack = reminder.update_stack(my_reminder['id'], name, hosts, urls)
+                stack = reminder.update_stack(my_reminder['id'], name, logo, category, hosts, urls)
                 changed = True
             except Exception as err:
                 module.fail_json(msg="Failed to create stack %s" % err)
